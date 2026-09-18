@@ -45,7 +45,15 @@ else
     SWA_COUNT=$(az staticwebapp list --query 'length(@)' -o tsv 2>/dev/null || echo "?")
     ok "Static Web Apps: $SWA_COUNT"
   else
-    fail "sin sesión activa  →  ejecutar: az login --use-device-code --tenant \"\$AZURE_TENANT_ID\""
+    fail "sin sesión activa"
+    echo ""
+    echo "  Para iniciar sesión (cuenta personal live.com / outlook.com):"
+    echo "    1. source ~/.zshrc"
+    echo "    2. az login --use-device-code"
+    echo "    3. Abrir https://login.microsoft.com/device e ingresar el código"
+    echo "    4. Seleccionar suscripción cuando aparezca la lista"
+    echo ""
+    echo "  Ver docs/00-auth.md para más detalles y troubleshooting."
   fi
 fi
 
