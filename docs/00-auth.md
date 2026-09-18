@@ -67,6 +67,39 @@ Repo:      https://github.com/RamRider89/regina-countdown
 
 ---
 
+## Qué tipo de cuenta Microsoft usar para Azure
+
+### Comparativa
+
+| Tipo | Ejemplo | Login con `az` CLI | Recomendado |
+|---|---|---|---|
+| **Personal legacy** (`live.com`) | `carlos@live.com.mx` | Requiere tenant AD propio + deshabilitar Security Defaults | Para cuentas existentes |
+| **Outlook.com (personal)** | `dev-carlos@outlook.com` | Directo — tenant AD creado automáticamente sin fricción | ✓ Nueva cuenta personal |
+| **Azure AD nativa** | `carlos@empresa.onmicrosoft.com` | Directo | ✓ Proyectos de equipo |
+| **Azure AD empresarial** | `carlos@empresa.com` | Directo | ✓ Entorno corporativo |
+
+### Recomendación para cuenta nueva
+
+Si se crea una cuenta nueva para desarrollo Azure, usar **Outlook.com** (`@outlook.com`):
+- Microsoft crea el tenant Azure AD directamente — sin complicaciones de `live.com` legacy
+- Login con `az` funciona sin configuración extra
+- Sin Security Defaults problemáticos en el device code flow
+- Se puede usar para GitHub también (`gh auth login`)
+
+```bash
+# Con cuenta @outlook.com, el login es simplemente:
+az login --use-device-code
+# Sin --tenant, sin configuración de Security Defaults
+```
+
+Si se crea una nueva cuenta Outlook para este proyecto, seguir la guía de [migración](#migrar-a-cuenta-outlook) al final de este documento.
+
+### Cuenta actual (`live.com`) — sigue funcionando
+
+La cuenta `carloss_duartes@live.com.mx` ya está configurada y autenticada. No es necesario cambiar. El setup documentado en este archivo cubre todos los workarounds necesarios.
+
+---
+
 ## Caso de uso: Cuenta personal Microsoft (`live.com`) en Azure
 
 ### Por qué es diferente a una cuenta corporativa
@@ -241,3 +274,46 @@ az login --use-device-code
 # 3. Crear nuevo proyecto desde el blueprint
 ./scripts/01-create-repo.sh --name mi-app
 ```
+
+---
+
+## Migrar a cuenta Outlook
+
+Si se decide crear una cuenta `@outlook.com` dedicada para Azure:
+
+### 1. Crear la cuenta
+
+1. Ir a **outlook.com** → Crear cuenta nueva (`dev-carlos@outlook.com` o similar)
+2. Iniciar sesión en **portal.azure.com** con esa cuenta — esto crea el tenant Azure AD automáticamente
+3. Activar una suscripción (Azure Free o Pay-as-you-go)
+
+### 2. Actualizar variables de entorno
+
+Una vez creada la suscripción, obtener los nuevos IDs:
+
+```bash
+# Con az autenticado con la nueva cuenta:
+az account show --query '{id:id, tenantId:tenantId}' -o json
+```
+
+Actualizar `~/.zshrc`:
+
+```bash
+export AZURE_SUBSCRIPTION_ID=<nuevo-subscription-id>
+export AZURE_TENANT_ID=<nuevo-tenant-id>
+export AZURE_RESOURCE_GROUP=<nuevo-resource-group>
+```
+
+### 3. Actualizar docs/05-env-vars.md
+
+Reflejar los nuevos valores en la tabla de estado y hacer commit.
+
+### 4. Verificar
+
+```bash
+source ~/.zshrc
+az login --use-device-code
+./scripts/00-check-auth.sh
+```
+
+Con `@outlook.com` el login no requiere `--tenant` ni deshabilitar Security Defaults.
