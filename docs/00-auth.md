@@ -72,29 +72,39 @@ Abrir `https://login.microsoft.com/device` en el browser de Windows e ingresar e
 
 ### Problema conocido: tenant bc31de7d bloquea el discovery
 
-Durante el login, el tenant `bc31de7d-3859-4df0-9fc0-091b2c8810d4` (Default Directory de Microsoft) devuelve:
+El tenant `bc31de7d-3859-4df0-9fc0-091b2c8810d4` (Default Directory de Microsoft) tiene security defaults que bloquean el discovery de suscripciones:
 
 ```
 AADSTS530035: Access has been blocked by security defaults.
 No subscriptions found for carloss_duartes@live.com.mx.
 ```
 
-**Causa:** el discovery automático de suscripciones falla en ese tenant. La suscripción `1870859a` existe y funciona, pero `az` no la detecta sola.
+La autenticación en sí es exitosa — el problema es que `az` no puede listar las suscripciones a través de ese tenant. La suscripción `1870859a` existe (confirmado por la SWA de regina-countdown).
 
-**Fix — apuntar directamente al subscription ID:**
+**Fix 1 — Apuntar al tenant MSA (recomendado)**
+
+Las cuentas personales `live.com` tienen tenant propio: `9188040d-6c67-4c5b-b112-36a304b66dad`. Este tenant sí puede acceder a la suscripción:
 
 ```bash
-az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
+az login --use-device-code --tenant 9188040d-6c67-4c5b-b112-36a304b66dad
 ```
 
-Esto carga la suscripción directamente sin pasar por el tenant problemático.
+**Fix 2 — Login sin discovery + set manual**
 
-**O, si ya se autenticó, establecer la suscripción manualmente:**
+Si el Fix 1 no funciona, autenticar omitiendo el discovery y setear la suscripción directamente:
 
 ```bash
-az account set --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
+az login --use-device-code --allow-no-subscriptions
+az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 az account show
 ```
+
+**Fix 3 — Desde el Portal**
+
+Si ningún fix de CLI funciona, autenticar desde el Portal de Azure:
+1. Ir a `portal.azure.com` → Cloud Shell
+2. Ejecutar `az account show` ahí para obtener el tenant ID correcto
+3. Usar ese tenant ID en el Fix 1
 
 ### Verificar acceso una vez autenticado
 
