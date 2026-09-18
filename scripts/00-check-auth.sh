@@ -45,7 +45,7 @@ else
     SWA_COUNT=$(az staticwebapp list --query 'length(@)' -o tsv 2>/dev/null || echo "?")
     ok "Static Web Apps: $SWA_COUNT"
   else
-    fail "sin sesión activa  →  ejecutar: az login --use-device-code --subscription \"\$AZURE_SUBSCRIPTION_ID\""
+    fail "sin sesión activa  →  ejecutar: az login --use-device-code --tenant \"\$AZURE_TENANT_ID\""
   fi
 fi
 
@@ -68,6 +68,7 @@ check_var() {
 }
 
 check_var AZURE_SUBSCRIPTION_ID
+check_var AZURE_TENANT_ID
 check_var AZURE_RESOURCE_GROUP
 check_var AZURE_LOCATION
 check_var GITHUB_TOKEN

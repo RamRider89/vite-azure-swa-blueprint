@@ -11,6 +11,7 @@ Convención del proyecto: IDs, tokens y valores que varían por entorno o por pe
 | Variable | Estado | Uso |
 |---|---|---|
 | `AZURE_SUBSCRIPTION_ID` | ✓ definida | `az login`, `az account set`, `01-create-repo.sh` |
+| `AZURE_TENANT_ID` | ✗ pendiente | `az login --tenant` — obtener de Azure Portal → Suscripciones → Directory |
 | `AZURE_RESOURCE_GROUP` | ✓ definida | `01-create-repo.sh` (default de `--rg`) |
 | `AZURE_LOCATION` | ✓ definida | `01-create-repo.sh` (default de `--location`) |
 | `AZURE_STATIC_WEB_APPS_API_TOKEN` | ✓ definida | Token de deploy de la SWA activa (regina-countdown) |
@@ -40,6 +41,7 @@ export AZURE_STATIC_WEB_APPS_API_TOKEN=<deployment-token-regina-countdown>
 
 # azure subscription
 export AZURE_SUBSCRIPTION_ID=1870859a-02b5-451f-8e1a-74b8cb5e1255
+export AZURE_TENANT_ID=<obtener-de-portal-azure-suscripciones-directory>
 export AZURE_RESOURCE_GROUP=RecursosTEST
 export AZURE_LOCATION=eastasia
 ```

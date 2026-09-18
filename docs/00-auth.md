@@ -81,30 +81,42 @@ No subscriptions found for carloss_duartes@live.com.mx.
 
 La autenticación en sí es exitosa — el problema es que `az` no puede listar las suscripciones a través de ese tenant. La suscripción `1870859a` existe (confirmado por la SWA de regina-countdown).
 
-**Fix 1 — Apuntar al tenant MSA (recomendado)**
+**Causa raíz**
 
-Las cuentas personales `live.com` tienen tenant propio: `9188040d-6c67-4c5b-b112-36a304b66dad`. Este tenant sí puede acceder a la suscripción:
+Azure Resource Manager (ARM) no admite autenticación de cuentas personales (`live.com`) vía el endpoint `/consumers`. El tenant MSA `9188040d` tampoco funciona con `az` porque ARM está configurado solo para Azure AD (cuentas de trabajo/escuela).
+
+La suscripción `1870859a` existe y funciona — está asociada a un **Azure AD tenant específico** creado al abrir esa suscripción. Ese tenant es distinto de `bc31de7d` y distinto de `9188040d`.
+
+**Fix — Encontrar el tenant correcto en el Portal**
+
+1. Ir a `portal.azure.com` con `carloss_duartes@live.com.mx`
+2. **Suscripciones** → seleccionar la suscripción `1870859a` → columna **"Directory"**
+3. Copiar el GUID del directorio (tenant ID)
+4. Agregar a `~/.zshrc`:
+   ```bash
+   export AZURE_TENANT_ID=<guid-del-portal>
+   ```
+5. Login apuntando a ese tenant:
+   ```bash
+   az login --use-device-code --tenant "$AZURE_TENANT_ID"
+   ```
+
+**Alternativa — Cloud Shell del Portal**
+
+El Cloud Shell del Portal (`portal.azure.com` → icono `>_`) autentica sin `az login`. Ejecutar ahí para obtener el tenant:
 
 ```bash
-az login --use-device-code --tenant 9188040d-6c67-4c5b-b112-36a304b66dad
+az account show --query tenantId --output tsv
 ```
 
-**Fix 2 — Login sin discovery + set manual**
+Usar ese valor como `AZURE_TENANT_ID`.
 
-Si el Fix 1 no funciona, autenticar omitiendo el discovery y setear la suscripción directamente:
+**Estado mientras no está resuelto**
 
-```bash
-az login --use-device-code --allow-no-subscriptions
-az account set --subscription "$AZURE_SUBSCRIPTION_ID"
-az account show
-```
-
-**Fix 3 — Desde el Portal**
-
-Si ningún fix de CLI funciona, autenticar desde el Portal de Azure:
-1. Ir a `portal.azure.com` → Cloud Shell
-2. Ejecutar `az account show` ahí para obtener el tenant ID correcto
-3. Usar ese tenant ID en el Fix 1
+El deploy de Azure SWA funciona sin `az` CLI local:
+- Creación de recursos: via Azure Portal (browser)
+- Deploy: via GitHub Actions + deployment token (`AZURE_STATIC_WEB_APPS_API_TOKEN`)
+- Monitoreo: `./scripts/04-deploy-status.sh` (usa `gh` CLI, no `az`)
 
 ### Verificar acceso una vez autenticado
 
