@@ -2,70 +2,50 @@
 
 Plantilla para desplegar una app **Vite + React + TypeScript** en **Azure Static Web Apps** con GitHub Actions y autenticación OIDC.
 
-Incluye todas las configuraciones no obvias descubiertas en producción. Ver `plan/Contrato_GitHub_Actions_Azure_SWA.md` para la guía completa.
+Documenta las restricciones no obvias descubiertas en producción que no están en la documentación oficial de Azure.
 
 ## Stack
 
-- React 19 + TypeScript
-- Vite 8 (`outDir: 'build'` — requerido por Azure SWA)
+- React 19 + TypeScript · Vite 8 · Node 22
+- Vitest 2 + Testing Library
 - GitHub Actions + OIDC
 - Azure Static Web Apps Free tier
 
 ## Quickstart
 
-### 1. Instalar dependencias
-
 ```bash
+nvm use
 npm install
+npm run dev        # http://localhost:5173
 ```
 
-### 2. Desarrollo local
+## Deploy a Azure
 
 ```bash
-npm run dev       # http://localhost:5173
-npm run build     # build → build/
-npm run preview   # preview del build en http://localhost:4173
+./scripts/01-create-repo.sh --name mi-app --rg rg-mi-app
 ```
 
-### 3. Conectar a Azure Static Web Apps
+Requiere `gh auth login` y `az login`. Ver [docs/02-deployment.md](docs/02-deployment.md) para el proceso manual paso a paso.
 
-1. Azure Portal → Static Web Apps → **+ Create**
-2. Conectar este repo, rama `main`
-3. Build preset: **Custom**
-4. App location: `/` · Output location: `build` · API location: *(vacío)*
-5. Azure generará el archivo `.github/workflows/azure-static-web-apps-<nombre>.yml`
-6. Reemplazar el workflow template de este repo con el generado por Azure
-7. Agregar los pasos Node/test/build al archivo generado (marcados con `# ADD` en el template)
+## Documentación
 
-> El nombre del workflow NO puede cambiar después — Azure lo verifica para OIDC.
-
-### 4. Secrets
-
-Azure crea automáticamente el secret en GitHub:
-
-```
-AZURE_STATIC_WEB_APPS_API_TOKEN_<ADJECTIVE>_<NOUN>_<HEX>
-```
-
-Verificar el nombre exacto:
-
-```bash
-gh api /repos/<owner>/<repo>/actions/secrets --jq '.secrets[].name'
-```
+| Doc | Contenido |
+|---|---|
+| [docs/01-architecture.md](docs/01-architecture.md) | Por qué `outDir: 'build'`, OIDC, configuración en runtime, staging automático |
+| [docs/02-deployment.md](docs/02-deployment.md) | Guía completa: crear recurso Azure → conectar repo → verificar deploy → troubleshooting |
+| [docs/03-configuration.md](docs/03-configuration.md) | Referencia de `vite.config.ts`, `staticwebapp.config.json`, workflow YAML |
+| [docs/04-scripts.md](docs/04-scripts.md) | Uso de `01-create-repo.sh`, `02-dev.sh`, `03-build.sh`, `04-deploy-status.sh` |
+| [plan/Contrato_GitHub_Actions_Azure_SWA.md](plan/Contrato_GitHub_Actions_Azure_SWA.md) | Workflow YAML completo + todos los errores conocidos |
 
 ## Estructura
 
 ```
-.github/
-  workflows/
-    azure-static-web-apps-REPLACE-NAME.yml  ← reemplazar con el generado por Azure
-src/                                         ← código de la app
-staticwebapp.config.json                     ← SPA fallback + headers de seguridad
-vite.config.ts                               ← outDir: 'build' (crítico para Azure)
-plan/
-  Contrato_GitHub_Actions_Azure_SWA.md       ← guía completa con troubleshooting
+.github/workflows/
+  azure-static-web-apps-REPLACE-NAME.yml  ← reemplazar con el generado por Azure
+docs/                                      ← guías de uso
+scripts/                                   ← 01-create-repo.sh · 02-dev.sh · 03-build.sh · 04-deploy-status.sh
+src/                                       ← código de la app
+staticwebapp.config.json                   ← SPA fallback + headers de seguridad
+vite.config.ts                             ← outDir: 'build' (crítico para Azure)
+plan/                                      ← contratos de referencia técnica
 ```
-
-## Troubleshooting
-
-Ver `plan/Contrato_GitHub_Actions_Azure_SWA.md` para los errores más comunes y sus soluciones.

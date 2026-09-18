@@ -7,4 +7,9 @@ export default defineConfig({
     // Azure SWA Oryx builder expects 'build/' (CRA convention), not Vite's default 'dist/'
     outDir: 'build',
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/test/setup.ts'],
+  },
 })
