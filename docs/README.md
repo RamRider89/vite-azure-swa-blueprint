@@ -7,6 +7,7 @@
 | [02-deployment.md](02-deployment.md) | Guía de deploy: setup automatizado y manual, rotar token, troubleshooting |
 | [03-configuration.md](03-configuration.md) | Referencia de `vite.config.ts`, `staticwebapp.config.json`, `tsconfig.app.json`, workflow YAML |
 | [04-scripts.md](04-scripts.md) | Uso de cada script en `scripts/` |
+| [05-env-vars.md](05-env-vars.md) | Variables de entorno: estado actual, convención, qué no commitear |
 
 Para la referencia técnica completa del CI/CD (workflow YAML completo, todos los errores conocidos):
 [plan/Contrato_GitHub_Actions_Azure_SWA.md](../plan/Contrato_GitHub_Actions_Azure_SWA.md)

@@ -5,13 +5,16 @@
 #   gh auth login       (GitHub CLI autenticado)
 #   az login            (Azure CLI autenticado)
 #
+# Variables de entorno reconocidas (ver docs/05-env-vars.md):
+#   AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, AZURE_LOCATION
+#
 # Uso:
-#   ./scripts/01-create-repo.sh --name <repo-name> --rg <resource-group> [--location eastus2] [--private]
+#   ./scripts/01-create-repo.sh --name <repo-name> [--rg <resource-group>] [--location eastasia] [--private]
 set -euo pipefail
 
 REPO_NAME=""
-RESOURCE_GROUP=""
-LOCATION="eastus2"
+RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-}"
+LOCATION="${AZURE_LOCATION:-eastus2}"
 VISIBILITY="--public"
 
 # ── argumentos ────────────────────────────────────────────────────────────────
@@ -22,15 +25,20 @@ while [[ $# -gt 0 ]]; do
     --location) LOCATION="$2";        shift 2 ;;
     --private)  VISIBILITY="--private"; shift ;;
     *)
-      echo "Uso: $0 --name <repo-name> --rg <resource-group> [--location eastus2] [--private]"
+      echo "Uso: $0 --name <repo-name> [--rg <resource-group>] [--location <región>] [--private]"
       exit 1
       ;;
   esac
 done
 
-if [ -z "$REPO_NAME" ] || [ -z "$RESOURCE_GROUP" ]; then
-  echo "Error: --name y --rg son obligatorios."
-  echo "Uso: $0 --name mi-app --rg rg-mi-app"
+if [ -z "$REPO_NAME" ]; then
+  echo "Error: --name es obligatorio."
+  echo "Uso: $0 --name mi-app"
+  exit 1
+fi
+
+if [ -z "$RESOURCE_GROUP" ]; then
+  echo "Error: --rg es obligatorio (o definir AZURE_RESOURCE_GROUP en el entorno)."
   exit 1
 fi
 
@@ -50,8 +58,12 @@ if ! az account show &>/dev/null 2>&1; then
 fi
 
 GH_USER=$(gh api /user --jq '.login')
-echo "GitHub: $GH_USER"
-echo "Azure:  $(az account show --query 'name' -o tsv)"
+AZ_SUB=$(az account show --query 'name' -o tsv)
+AZ_SUB_ID=$(az account show --query 'id' -o tsv)
+
+echo "GitHub:       $GH_USER"
+echo "Azure:        $AZ_SUB ($AZ_SUB_ID)"
+echo "Resource group: $RESOURCE_GROUP ($LOCATION)"
 echo ""
 
 # ── 1. crear repo GitHub ──────────────────────────────────────────────────────
