@@ -87,35 +87,34 @@ Azure Resource Manager (ARM) no admite autenticación de cuentas personales (`li
 
 La suscripción `1870859a` existe y funciona — está asociada a un **Azure AD tenant específico** creado al abrir esa suscripción. Ese tenant es distinto de `bc31de7d` y distinto de `9188040d`.
 
-**Fix — Encontrar el tenant correcto en el Portal**
+**Tenant confirmado**
 
-1. Ir a `portal.azure.com` con `carloss_duartes@live.com.mx`
-2. **Suscripciones** → seleccionar la suscripción `1870859a` → columna **"Directory"**
-3. Copiar el GUID del directorio (tenant ID)
-4. Agregar a `~/.zshrc`:
-   ```bash
-   export AZURE_TENANT_ID=<guid-del-portal>
-   ```
-5. Login apuntando a ese tenant:
-   ```bash
-   az login --use-device-code --tenant "$AZURE_TENANT_ID"
-   ```
-
-**Alternativa — Cloud Shell del Portal**
-
-El Cloud Shell del Portal (`portal.azure.com` → icono `>_`) autentica sin `az login`. Ejecutar ahí para obtener el tenant:
-
-```bash
-az account show --query tenantId --output tsv
+```
+Tenant ID:   bc31de7d-3859-4df0-9fc0-091b2c8810d4
+Directorio:  Default Directory (carlossduarteslivecom.onmicrosoft.com)
 ```
 
-Usar ese valor como `AZURE_TENANT_ID`.
+El tenant ES el correcto — pero tiene **Security Defaults habilitados**, que bloquean el device code flow de Azure CLI.
 
-**Estado mientras no está resuelto**
+**Fix — Deshabilitar Security Defaults**
 
-El deploy de Azure SWA funciona sin `az` CLI local:
+1. `portal.azure.com` → **Microsoft Entra ID** → **Properties**
+2. Al final de la página: **Manage Security Defaults**
+3. Cambiar a **Disabled** → guardar
+
+Después de deshabilitar, el login funciona normalmente:
+
+```bash
+az login --use-device-code --tenant "$AZURE_TENANT_ID"
+```
+
+> Security Defaults protege contra ataques comunes en tenants con múltiples usuarios. Para un tenant de desarrollo personal con un solo propietario, deshabilitarlo es aceptable.
+
+**Estado mientras Security Defaults está activo**
+
+El deploy funciona sin `az` CLI local:
 - Creación de recursos: via Azure Portal (browser)
-- Deploy: via GitHub Actions + deployment token (`AZURE_STATIC_WEB_APPS_API_TOKEN`)
+- Deploy: via GitHub Actions + `AZURE_STATIC_WEB_APPS_API_TOKEN`
 - Monitoreo: `./scripts/04-deploy-status.sh` (usa `gh` CLI, no `az`)
 
 ### Verificar acceso una vez autenticado
