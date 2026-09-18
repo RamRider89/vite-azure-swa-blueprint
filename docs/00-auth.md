@@ -12,47 +12,40 @@ Estado y proceso de login para operar este blueprint con las cuentas personales.
 Cuenta:    RamRider89
 Token:     fine-grained PAT (github_pat_11A3WZ3XI...)
 Protocolo: SSH
+Estado:    ✓ activo
 ```
 
-La sesión está activa. `gh auth status` muestra dos entradas para la misma cuenta:
+`gh auth status` muestra dos entradas para la misma cuenta:
 
 | Fuente | Estado | Por qué existe |
 |---|---|---|
 | `GITHUB_TOKEN` (env var) | active | La variable de entorno tiene precedencia |
 | `~/.config/gh/hosts.yml` | inactive | Credencial almacenada en disco |
 
-Ambas usan la misma token — no hay conflicto. La entrada activa es la de `GITHUB_TOKEN`.
+Ambas usan la misma token — no hay conflicto.
 
 ### Renovar o cambiar la sesión
 
-Si el token expira o hay que reautenticar:
-
 ```bash
-# Desloguear la sesión activa
 gh auth logout
-
-# Volver a autenticar (abre browser)
 gh auth login
 # → GitHub.com → HTTPS → Login with a web browser
 ```
 
-### Verificar scopes de la token
+### Scopes mínimos requeridos por `01-create-repo.sh`
 
-Los scopes mínimos requeridos por `01-create-repo.sh`:
-
-| Operación | Scope requerido |
+| Operación | Scope (fine-grained) |
 |---|---|
-| Crear repositorios | `Administration: read/write` (fine-grained) |
-| Gestionar secrets | `Secrets: read/write` (fine-grained) |
-| Leer/disparar Actions | `Actions: read/write` (fine-grained) |
+| Crear repositorios | `Administration: read/write` |
+| Gestionar secrets | `Secrets: read/write` |
+| Leer/disparar Actions | `Actions: read/write` |
 
 ```bash
-# Ver scopes activos
+# Verificar scopes activos
 gh auth status
 ```
 
-Si falta alguno, editar la token en:
-**github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
+Editar en: **github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
 
 ---
 
@@ -61,45 +54,72 @@ Si falta alguno, editar la token en:
 ### Estado actual
 
 ```
-Estado: sin sesión activa
+Cuenta:       carloss_duartes@live.com.mx
+Tenant:       bc31de7d-3859-4df0-9fc0-091b2c8810d4 (Default Directory)
+Suscripción:  ninguna — pendiente de crear
+Estado:       ⚠ autenticado, sin suscripción activa
 ```
 
-### Login interactivo (personal)
+### Error encontrado durante el login
 
-```bash
-az login
-# → abre el browser
-# → seleccionar la cuenta personal de Microsoft/Azure
-# → confirmar en el browser
+```
+AADSTS530035: Access has been blocked by security defaults.
+Tenant: bc31de7d-3859-4df0-9fc0-091b2c8810d4 'Default Directory'
+No subscriptions found for carloss_duartes@live.com.mx.
 ```
 
-Al completar, la CLI muestra las suscripciones disponibles. Si hay más de una:
+**Qué significa:**
+- La autenticación de la cuenta personal fue exitosa
+- El tenant `Default Directory` (creado automáticamente por Microsoft) bloqueó el acceso con security defaults — no afecta el uso de Azure con una suscripción propia
+- La cuenta no tiene suscripción de Azure activa — sin ella no se pueden crear recursos
+
+### Crear suscripción (paso necesario)
+
+Para usar Azure Static Web Apps se requiere una suscripción activa. El free tier es suficiente para este blueprint:
+
+**https://azure.microsoft.com/free**
+
+Incluye:
+- $200 USD de crédito por 30 días
+- Static Web Apps Free tier — gratis indefinidamente (sin tarjeta después del período)
+
+### Login en WSL (método probado)
 
 ```bash
-# Listar suscripciones
+az login --use-device-code
+```
+
+Salida esperada:
+```
+To sign in, use a web browser to open the page https://login.microsoft.com/device
+and enter the code XXXXXXXX to authenticate.
+```
+
+Abrir en el browser de Windows, ingresar el código y autenticar con `carloss_duartes@live.com.mx`.
+
+### Una vez creada la suscripción
+
+```bash
+# Autenticar
+az login --use-device-code
+
+# Verificar que la suscripción aparece
 az account list --output table
 
-# Establecer la suscripción activa
+# Establecer como default si hay más de una
 az account set --subscription "<nombre-o-id>"
 
 # Confirmar
 az account show
 ```
 
-### Verificar acceso a Static Web Apps
-
-```bash
-# Listar SWAs existentes (debe devolver [] si no hay ninguna aún)
-az staticwebapp list --output table
-```
-
 ### Renovar sesión expirada
 
 ```bash
-az login
+az login --use-device-code
 ```
 
-La sesión de az dura ~1 hora en entornos interactivos. En WSL puede expirar más rápido.
+La sesión de az dura ~1 hora en WSL.
 
 ---
 
@@ -118,8 +138,8 @@ Salida esperada cuando todo está en orden:
 
 ── Azure CLI (az) ───────────────────────────────
   ✓ az instalado: 2.x.x
-  ✓ sesión activa: usuario@ejemplo.com
-  ✓ suscripción:   Mi Suscripción
+  ✓ sesión activa: carloss_duartes@live.com.mx
+  ✓ suscripción:   <nombre de la suscripción>
   ✓ id:            xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   ✓ Static Web Apps en la suscripción: 0
 
@@ -129,14 +149,15 @@ Salida esperada cuando todo está en orden:
 
 ---
 
-## Flujo de trabajo recomendado
+## Flujo de trabajo completo
 
 ```bash
 # 1. Verificar cuentas
 ./scripts/00-check-auth.sh
 
-# 2. Si az no está autenticado
-az login
+# 2. Si az no tiene suscripción → crear en https://azure.microsoft.com/free
+#    Luego re-autenticar:
+az login --use-device-code
 
 # 3. Crear nuevo proyecto desde el blueprint
 ./scripts/01-create-repo.sh --name mi-app --rg rg-mi-app
