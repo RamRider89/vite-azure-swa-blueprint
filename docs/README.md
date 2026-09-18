@@ -2,6 +2,7 @@
 
 | Archivo | Contenido |
 |---|---|
+| [00-auth.md](00-auth.md) | Login de gh y az: estado actual, renovar sesión, verificación |
 | [01-architecture.md](01-architecture.md) | Decisiones de diseño: `outDir: 'build'`, OIDC, nombre fijo del workflow, config en runtime |
 | [02-deployment.md](02-deployment.md) | Guía de deploy: setup automatizado y manual, rotar token, troubleshooting |
 | [03-configuration.md](03-configuration.md) | Referencia de `vite.config.ts`, `staticwebapp.config.json`, `tsconfig.app.json`, workflow YAML |
