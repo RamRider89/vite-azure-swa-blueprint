@@ -7,8 +7,8 @@ Referencia operativa para gestionar recursos de Azure desde terminal, enfocada e
 ## Instalación y autenticación
 
 ```bash
-# Instalar (Ubuntu/Debian)
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+# Instalar (Ubuntu/Debian) — fuente oficial Microsoft
+curl -fsSL 'https://azurecliprod.blob.core.windows.net/$root/deb_install.sh' | sudo bash
 
 # Instalar (macOS)
 brew install azure-cli
