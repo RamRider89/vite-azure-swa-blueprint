@@ -98,9 +98,19 @@ El tenant ES el correcto — pero tiene **Security Defaults habilitados**, que b
 
 **Fix — Deshabilitar Security Defaults**
 
-1. `portal.azure.com` → **Microsoft Entra ID** → **Properties**
-2. Al final de la página: **Manage Security Defaults**
-3. Cambiar a **Disabled** → guardar
+Ruta directa en el Portal:
+
+```
+portal.azure.com/#view/Microsoft_AAD_IAM/SecurityDefaultsPage
+```
+
+O navegando:
+1. **Microsoft Entra ID** → **Overview** → pestaña **Properties**
+2. Al final de la página → link **"Manage security defaults"**
+3. Toggle **Security defaults**: cambiar de **Enabled** a **Disabled**
+4. Seleccionar motivo → **Save**
+
+> ⚠ No confundir con **"Access management for Azure resources"** (también en Properties) — esa opción es para RBAC de administrador global y no afecta el login de `az`.
 
 Después de deshabilitar, el login funciona normalmente:
 
