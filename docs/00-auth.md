@@ -40,86 +40,79 @@ gh auth login
 | Gestionar secrets | `Secrets: read/write` |
 | Leer/disparar Actions | `Actions: read/write` |
 
-```bash
-# Verificar scopes activos
-gh auth status
-```
-
 Editar en: **github.com → Settings → Developer settings → Personal access tokens → Fine-grained tokens**
 
 ---
 
 ## Azure CLI (`az`)
 
-### Estado actual
+### Cuentas y suscripciones
 
 ```
-Cuenta:       carloss_duartes@live.com.mx
-Tenant:       bc31de7d-3859-4df0-9fc0-091b2c8810d4 (Default Directory)
-Suscripción:  ninguna — pendiente de crear
-Estado:       ⚠ autenticado, sin suscripción activa
+Cuenta:          carloss_duartes@live.com.mx
+Suscripción:     1870859a-02b5-451f-8e1a-74b8cb5e1255
+Resource Group:  RecursosTEST
+Región default:  East Asia
 ```
 
-### Error encontrado durante el login
+SWA existente en esta suscripción:
+```
+Nombre:    regina-countdown
+URL:       https://purple-pebble-07a0da800.5.azurestaticapps.net
+Repo:      https://github.com/RamRider89/regina-countdown
+```
+
+### Login en WSL
+
+```bash
+az login --use-device-code
+```
+
+Abrir `https://login.microsoft.com/device` en el browser de Windows e ingresar el código.
+
+### Problema conocido: tenant bc31de7d bloquea el discovery
+
+Durante el login, el tenant `bc31de7d-3859-4df0-9fc0-091b2c8810d4` (Default Directory de Microsoft) devuelve:
 
 ```
 AADSTS530035: Access has been blocked by security defaults.
-Tenant: bc31de7d-3859-4df0-9fc0-091b2c8810d4 'Default Directory'
 No subscriptions found for carloss_duartes@live.com.mx.
 ```
 
-**Qué significa:**
-- La autenticación de la cuenta personal fue exitosa
-- El tenant `Default Directory` (creado automáticamente por Microsoft) bloqueó el acceso con security defaults — no afecta el uso de Azure con una suscripción propia
-- La cuenta no tiene suscripción de Azure activa — sin ella no se pueden crear recursos
+**Causa:** el discovery automático de suscripciones falla en ese tenant. La suscripción `1870859a` existe y funciona, pero `az` no la detecta sola.
 
-### Crear suscripción (paso necesario)
-
-Para usar Azure Static Web Apps se requiere una suscripción activa. El free tier es suficiente para este blueprint:
-
-**https://azure.microsoft.com/free**
-
-Incluye:
-- $200 USD de crédito por 30 días
-- Static Web Apps Free tier — gratis indefinidamente (sin tarjeta después del período)
-
-### Login en WSL (método probado)
+**Fix — apuntar directamente al subscription ID:**
 
 ```bash
-az login --use-device-code
+az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
 ```
 
-Salida esperada:
-```
-To sign in, use a web browser to open the page https://login.microsoft.com/device
-and enter the code XXXXXXXX to authenticate.
-```
+Esto carga la suscripción directamente sin pasar por el tenant problemático.
 
-Abrir en el browser de Windows, ingresar el código y autenticar con `carloss_duartes@live.com.mx`.
-
-### Una vez creada la suscripción
+**O, si ya se autenticó, establecer la suscripción manualmente:**
 
 ```bash
-# Autenticar
-az login --use-device-code
-
-# Verificar que la suscripción aparece
-az account list --output table
-
-# Establecer como default si hay más de una
-az account set --subscription "<nombre-o-id>"
-
-# Confirmar
+az account set --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
 az account show
+```
+
+### Verificar acceso una vez autenticado
+
+```bash
+# Confirmar suscripción activa
+az account show --query '{name:name, id:id, user:user.name}' --output table
+
+# Listar SWAs en la suscripción
+az staticwebapp list --output table
 ```
 
 ### Renovar sesión expirada
 
-```bash
-az login --use-device-code
-```
-
 La sesión de az dura ~1 hora en WSL.
+
+```bash
+az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
+```
 
 ---
 
@@ -129,7 +122,7 @@ La sesión de az dura ~1 hora en WSL.
 ./scripts/00-check-auth.sh
 ```
 
-Salida esperada cuando todo está en orden:
+Salida esperada:
 
 ```
 ── GitHub CLI (gh) ──────────────────────────────
@@ -139,9 +132,9 @@ Salida esperada cuando todo está en orden:
 ── Azure CLI (az) ───────────────────────────────
   ✓ az instalado: 2.x.x
   ✓ sesión activa: carloss_duartes@live.com.mx
-  ✓ suscripción:   <nombre de la suscripción>
-  ✓ id:            xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  ✓ Static Web Apps en la suscripción: 0
+  ✓ suscripción:   <nombre>
+  ✓ id:            1870859a-02b5-451f-8e1a-74b8cb5e1255
+  ✓ Static Web Apps en la suscripción: 1
 
 ────────────────────────────────────────────────
 ✓ Todo en orden. Listo para usar 01-create-repo.sh.
@@ -155,9 +148,8 @@ Salida esperada cuando todo está en orden:
 # 1. Verificar cuentas
 ./scripts/00-check-auth.sh
 
-# 2. Si az no tiene suscripción → crear en https://azure.microsoft.com/free
-#    Luego re-autenticar:
-az login --use-device-code
+# 2. Si az no está autenticado
+az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
 
 # 3. Crear nuevo proyecto desde el blueprint
 ./scripts/01-create-repo.sh --name mi-app --rg rg-mi-app
