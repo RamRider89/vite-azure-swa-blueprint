@@ -1,6 +1,6 @@
 # Autenticación — Cuentas personales
 
-Estado y proceso de login para operar este blueprint con las cuentas personales.
+Estado y proceso de login para operar este blueprint con cuentas personales Microsoft/GitHub.
 
 ---
 
@@ -44,15 +44,18 @@ Editar en: **github.com → Settings → Developer settings → Personal access 
 
 ---
 
-## Azure CLI (`az`)
+## Azure CLI (`az`) — Cuenta personal `live.com`
 
-### Cuentas y suscripciones
+### Estado actual
 
 ```
 Cuenta:          carloss_duartes@live.com.mx
-Suscripción:     1870859a-02b5-451f-8e1a-74b8cb5e1255
+Tenant:          bc31de7d-3859-4df0-9fc0-091b2c8810d4 (Default Directory)
+Suscripción:     Azure subscription 1
+Sub ID:          1870859a-02b5-451f-8e1a-74b8cb5e1255
 Resource Group:  RecursosTEST
 Región default:  East Asia
+Estado:          ✓ autenticado
 ```
 
 SWA existente en esta suscripción:
@@ -62,88 +65,140 @@ URL:       https://purple-pebble-07a0da800.5.azurestaticapps.net
 Repo:      https://github.com/RamRider89/regina-countdown
 ```
 
-### Login en WSL
+---
 
-```bash
-az login --use-device-code
-```
+## Caso de uso: Cuenta personal Microsoft (`live.com`) en Azure
 
-Abrir `https://login.microsoft.com/device` en el browser de Windows e ingresar el código.
+### Por qué es diferente a una cuenta corporativa
 
-### Problema conocido: tenant bc31de7d bloquea el discovery
+Las cuentas personales `live.com` / `hotmail.com` / `outlook.com` no son cuentas de Azure AD nativas. Cuando se crea una suscripción de Azure con una cuenta personal, Microsoft crea automáticamente un **Azure AD tenant** asociado (por ejemplo, `carlossduarteslivecom.onmicrosoft.com`). Ese tenant es el que maneja el acceso a la suscripción — no el tenant MSA genérico `9188040d`.
 
-El tenant `bc31de7d-3859-4df0-9fc0-091b2c8810d4` (Default Directory de Microsoft) tiene security defaults que bloquean el discovery de suscripciones:
+Azure Resource Manager (ARM) solo acepta autenticación via Azure AD. No hay endpoint `/consumers` para cuentas personales en ARM. Por esto, la autenticación pasa por el tenant específico de la suscripción.
 
-```
-AADSTS530035: Access has been blocked by security defaults.
-No subscriptions found for carloss_duartes@live.com.mx.
-```
+### Diagnóstico de errores comunes
 
-La autenticación en sí es exitosa — el problema es que `az` no puede listar las suscripciones a través de ese tenant. La suscripción `1870859a` existe (confirmado por la SWA de regina-countdown).
+| Error | Causa | Solución |
+|---|---|---|
+| `AADSTS530035: Access has been blocked by security defaults` | Security Defaults habilitados en el tenant | [Deshabilitar Security Defaults](#fix-deshabilitar-security-defaults) |
+| `AADSTS9002332: Application ... is not supported over the /consumers endpoint` | Intentar login con el tenant MSA genérico (`9188040d`) | Usar el tenant propio de la suscripción |
+| `Failed to resolve tenant ''` | `$AZURE_TENANT_ID` vacío en la sesión de shell | `source ~/.zshrc` antes de correr `az login` |
+| `AADSTS90002: Tenant 'v2.0' not found` | `--tenant ""` (string vacío) — az convierte el vacío en `v2.0` como endpoint | Az procede con discovery automático igualmente; el login puede continuar |
+| `AADSTS900561: The endpoint only accepts POST requests. Received a GET request.` | Se navegó directamente a la URL del código en lugar de ir a `https://login.microsoft.com/device` | Ir manualmente a la URL y escribir el código en el formulario |
+| `No subscriptions found for ...` | Security Defaults activos bloqueando el discovery | [Deshabilitar Security Defaults](#fix-deshabilitar-security-defaults) |
 
-**Causa raíz**
+---
 
-Azure Resource Manager (ARM) no admite autenticación de cuentas personales (`live.com`) vía el endpoint `/consumers`. El tenant MSA `9188040d` tampoco funciona con `az` porque ARM está configurado solo para Azure AD (cuentas de trabajo/escuela).
+## Fix — Deshabilitar Security Defaults
 
-La suscripción `1870859a` existe y funciona — está asociada a un **Azure AD tenant específico** creado al abrir esa suscripción. Ese tenant es distinto de `bc31de7d` y distinto de `9188040d`.
+Security Defaults bloquea el device code flow de Azure CLI. Necesita deshabilitarse una sola vez.
 
-**Tenant confirmado**
-
-```
-Tenant ID:   bc31de7d-3859-4df0-9fc0-091b2c8810d4
-Directorio:  Default Directory (carlossduarteslivecom.onmicrosoft.com)
-```
-
-El tenant ES el correcto — pero tiene **Security Defaults habilitados**, que bloquean el device code flow de Azure CLI.
-
-**Fix — Deshabilitar Security Defaults**
-
-Ruta directa en el Portal:
+**Ruta directa en el Portal:**
 
 ```
 portal.azure.com/#view/Microsoft_AAD_IAM/SecurityDefaultsPage
 ```
 
-O navegando:
+O navegando manualmente:
 1. **Microsoft Entra ID** → **Overview** → pestaña **Properties**
 2. Al final de la página → link **"Manage security defaults"**
 3. Toggle **Security defaults**: cambiar de **Enabled** a **Disabled**
 4. Seleccionar motivo → **Save**
 
-> ⚠ No confundir con **"Access management for Azure resources"** (también en Properties) — esa opción es para RBAC de administrador global y no afecta el login de `az`.
+> ⚠ No confundir con **"Access management for Azure resources"** (también en Properties) — esa opción es para RBAC de administrador global y no tiene efecto sobre el login de `az`.
 
-Después de deshabilitar, el login funciona normalmente:
+> Security Defaults protege contra ataques en tenants multi-usuario. Para un tenant de desarrollo personal con un solo propietario, deshabilitarlo es aceptable.
+
+---
+
+## Login en WSL (flujo completo)
+
+### Paso 1 — Asegurarse de que las vars de entorno están cargadas
 
 ```bash
-az login --use-device-code --tenant "$AZURE_TENANT_ID"
+source ~/.zshrc
+echo "$AZURE_TENANT_ID"
+# debe mostrar: bc31de7d-3859-4df0-9fc0-091b2c8810d4
 ```
 
-> Security Defaults protege contra ataques comunes en tenants con múltiples usuarios. Para un tenant de desarrollo personal con un solo propietario, deshabilitarlo es aceptable.
-
-**Estado mientras Security Defaults está activo**
-
-El deploy funciona sin `az` CLI local:
-- Creación de recursos: via Azure Portal (browser)
-- Deploy: via GitHub Actions + `AZURE_STATIC_WEB_APPS_API_TOKEN`
-- Monitoreo: `./scripts/04-deploy-status.sh` (usa `gh` CLI, no `az`)
-
-### Verificar acceso una vez autenticado
+### Paso 2 — Iniciar login por device code
 
 ```bash
-# Confirmar suscripción activa
-az account show --query '{name:name, id:id, user:user.name}' --output table
+az login --use-device-code
+```
 
-# Listar SWAs en la suscripción
+La terminal muestra un código como:
+```
+To sign in, use a web browser to open the page https://login.microsoft.com/device
+and enter the code XXXXXXXX to authenticate.
+```
+
+### Paso 3 — Autenticar en el browser
+
+1. Abrir **`https://login.microsoft.com/device`** en el browser de Windows
+2. **Escribir** el código que aparece en la terminal (no pegar como URL)
+3. Iniciar sesión con `carloss_duartes@live.com.mx`
+4. Aprobar el acceso
+
+> ⚠ Si el browser muestra `AADSTS900561: The endpoint only accepts POST requests` — navegaste a la URL del código directamente. Regresa a `https://login.microsoft.com/device` y escribe el código manualmente en el formulario.
+
+### Paso 4 — Seleccionar suscripción
+
+```
+No     Subscription name     Subscription ID                       Tenant
+-----  --------------------  ------------------------------------  -----------
+[1] *  Azure subscription 1  1870859a-02b5-451f-8e1a-74b8cb5e1255  bc31de7d-...
+
+Select a subscription and tenant (Type a number or Enter for no changes): 1
+```
+
+Ingresar `1` y Enter.
+
+### Verificar login
+
+```bash
+az account show --query '{name:name, id:id, user:user.name}' --output table
 az staticwebapp list --output table
 ```
 
-### Renovar sesión expirada
+---
+
+## Nota sobre `--tenant "$AZURE_TENANT_ID"`
+
+Al pasar `--tenant "$AZURE_TENANT_ID"` cuando la variable está vacía, az muestra:
+
+```
+Failed to resolve tenant ''.
+AADSTS90002: Tenant 'v2.0' not found.
+```
+
+Este error es no-fatal — az procede con discovery automático y puede encontrar la suscripción igualmente. Si la variable está definida correctamente el error no ocurre. En ambos casos el login puede completarse via el formulario de device code.
+
+Para evitar el error: siempre correr `source ~/.zshrc` antes de `az login`.
+
+---
+
+## Renovar sesión expirada
 
 La sesión de az dura ~1 hora en WSL.
 
 ```bash
-az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
+source ~/.zshrc
+az login --use-device-code
 ```
+
+Seleccionar suscripción `1870859a` cuando aparezca la lista.
+
+---
+
+## Fallback sin `az` CLI local
+
+Si hay problemas con el login local, el deploy funciona sin `az`:
+
+| Operación | Alternativa |
+|---|---|
+| Crear recursos | Azure Portal (browser) |
+| Deploy | GitHub Actions + `AZURE_STATIC_WEB_APPS_API_TOKEN` |
+| Monitoreo | `./scripts/04-deploy-status.sh` (usa `gh`, no `az`) |
 
 ---
 
@@ -153,7 +208,7 @@ az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
 ./scripts/00-check-auth.sh
 ```
 
-Salida esperada:
+Salida esperada cuando todo está en orden:
 
 ```
 ── GitHub CLI (gh) ──────────────────────────────
@@ -163,9 +218,8 @@ Salida esperada:
 ── Azure CLI (az) ───────────────────────────────
   ✓ az instalado: 2.x.x
   ✓ sesión activa: carloss_duartes@live.com.mx
-  ✓ suscripción:   <nombre>
-  ✓ id:            1870859a-02b5-451f-8e1a-74b8cb5e1255
-  ✓ Static Web Apps en la suscripción: 1
+  ✓ suscripción:   Azure subscription 1 (1870859a-02b5-451f-8e1a-74b8cb5e1255)
+  ✓ Static Web Apps: 1
 
 ────────────────────────────────────────────────
 ✓ Todo en orden. Listo para usar 01-create-repo.sh.
@@ -176,12 +230,14 @@ Salida esperada:
 ## Flujo de trabajo completo
 
 ```bash
-# 1. Verificar cuentas
+# 1. Cargar env vars y verificar cuentas
+source ~/.zshrc
 ./scripts/00-check-auth.sh
 
 # 2. Si az no está autenticado
-az login --use-device-code --subscription 1870859a-02b5-451f-8e1a-74b8cb5e1255
+az login --use-device-code
+# → abrir https://login.microsoft.com/device → ingresar código → seleccionar suscripción 1
 
 # 3. Crear nuevo proyecto desde el blueprint
-./scripts/01-create-repo.sh --name mi-app --rg rg-mi-app
+./scripts/01-create-repo.sh --name mi-app
 ```

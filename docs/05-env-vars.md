@@ -70,11 +70,14 @@ Los scripts leen las variables como defaults. Los flags CLI siempre tienen prece
 
 ---
 
-## Login con la variable ya definida
+## Login con las variables definidas
 
 ```bash
-az login --use-device-code --subscription "$AZURE_SUBSCRIPTION_ID"
+source ~/.zshrc
+az login --use-device-code
 ```
+
+> `source ~/.zshrc` es necesario para que `$AZURE_TENANT_ID` y `$AZURE_SUBSCRIPTION_ID` estén disponibles en la sesión actual. Sin esto, `az login --tenant "$AZURE_TENANT_ID"` pasa un string vacío y muestra un error no-fatal (ver [docs/00-auth.md](00-auth.md)).
 
 ---
 
